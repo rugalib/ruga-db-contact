@@ -25,7 +25,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `{$electronicAddressTable}` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `{$contactMechanismTable}_id` INT NULL DEFAULT NULL,
-  `address` VARCHAR(255) NOT NULL,
+  `address` VARCHAR(190) NOT NULL,
   `remark` TEXT NULL,
   `created` DATETIME NOT NULL,
   `createdBy` INT NOT NULL,

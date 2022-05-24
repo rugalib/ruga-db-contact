@@ -24,8 +24,8 @@ return <<<"SQL"
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `{$contactMechanismTable}` (
   `id` INT NOT NULL AUTO_INCREMENT,
-  `fullname` VARCHAR(255) NULL,
-  `contactmechanism_type` VARCHAR(255) NOT NULL,
+  `fullname` VARCHAR(190) NULL,
+  `contactmechanism_type` VARCHAR(190) NOT NULL,
   `remark` TEXT NULL,
   `created` DATETIME NOT NULL,
   `createdBy` INT NOT NULL,

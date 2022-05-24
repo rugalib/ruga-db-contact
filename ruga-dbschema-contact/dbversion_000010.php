@@ -22,8 +22,8 @@ $personHasContactMechanismTable = $resolver->getTableName(\Ruga\Contact\Link\Per
 return <<<"SQL"
 
 SET FOREIGN_KEY_CHECKS = 0;
-ALTER TABLE `{$telecomNumberTable}` CHANGE COLUMN `number` `number` VARCHAR(255) NOT NULL DEFAULT '' AFTER `{$contactMechanismTable}_id`;
-ALTER TABLE `{$electronicAddressTable}` CHANGE COLUMN `address` `address` VARCHAR(255) NOT NULL DEFAULT '' AFTER `{$contactMechanismTable}_id`;
+ALTER TABLE `{$telecomNumberTable}` CHANGE COLUMN `number` `number` VARCHAR(190) NOT NULL DEFAULT '' AFTER `{$contactMechanismTable}_id`;
+ALTER TABLE `{$electronicAddressTable}` CHANGE COLUMN `address` `address` VARCHAR(190) NOT NULL DEFAULT '' AFTER `{$contactMechanismTable}_id`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 SQL;
