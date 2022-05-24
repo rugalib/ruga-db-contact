@@ -5,14 +5,16 @@ declare(strict_types=1);
 /**
  * @return string
  * @var \Ruga\Db\Schema\Resolver $resolver
- * @var string                   $tableAddress
+ * @var string                   $addressTable
+ * @var string                   $contactMechanism
  */
-$tableAddress = \Ruga\Contact\Address\AddressTable::TABLENAME;
+$addressTable = $resolver->getTableName(\Ruga\Contact\Subtype\Address\AddressTable::class);
+$contactMechanism = $resolver->getTableName(\Ruga\Contact\ContactMechanismTable::class);
 
 return <<<"SQL"
 
 SET FOREIGN_KEY_CHECKS = 0;
-CREATE TABLE `{$tableAddress}` (
+CREATE TABLE `{$addressTable}` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `fullname` VARCHAR(255) NULL,
   `department` VARCHAR(255) NULL DEFAULT NULL,
@@ -32,11 +34,11 @@ CREATE TABLE `{$tableAddress}` (
   `changed` DATETIME NULL,
   `changedBy` INT NULL,
   PRIMARY KEY (`id`),
-  INDEX `{$tableAddress}_fullname_idx` (`fullname`),
-  INDEX `fk_{$tableAddress}_changedBy_idx` (`changedBy` ASC),
-  INDEX `fk_{$tableAddress}_createdBy_idx` (`createdBy` ASC),
-  CONSTRAINT `fk_{$tableAddress}_changedBy` FOREIGN KEY (`changedBy`) REFERENCES `User` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_{$tableAddress}_createdBy` FOREIGN KEY (`createdBy`) REFERENCES `User` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+  INDEX `{$addressTable}_fullname_idx` (`fullname`),
+  INDEX `fk_{$addressTable}_changedBy_idx` (`changedBy` ASC),
+  INDEX `fk_{$addressTable}_createdBy_idx` (`createdBy` ASC),
+  CONSTRAINT `fk_{$addressTable}_changedBy` FOREIGN KEY (`changedBy`) REFERENCES `User` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_{$addressTable}_createdBy` FOREIGN KEY (`createdBy`) REFERENCES `User` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 )
 ENGINE=InnoDB
 ;

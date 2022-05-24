@@ -21,7 +21,7 @@ class ConfigProvider
                 Updater::class => [
                     'components' => [
                         ContactMechanism::class => [
-                            Updater::CONF_REQUESTED_VERSION => 3,
+                            Updater::CONF_REQUESTED_VERSION => 12,
                             Updater::CONF_SCHEMA_DIRECTORY => __DIR__ . '/../ruga-dbschema-contact',
                             Updater::CONF_TABLES => [
                                 'ContactMechanismTable' => ContactMechanismTable::class,
