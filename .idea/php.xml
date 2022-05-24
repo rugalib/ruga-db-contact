@@ -73,6 +73,8 @@
       <path value="$PROJECT_DIR$/vendor/rugalib/ruga-db" />
       <path value="$PROJECT_DIR$/vendor/rugalib/ruga-std" />
       <path value="$PROJECT_DIR$/vendor/rugalib/ruga-db-user" />
+      <path value="$PROJECT_DIR$/vendor/rugalib/ruga-db-organization" />
+      <path value="$PROJECT_DIR$/vendor/rugalib/ruga-db-person" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="7.4" />

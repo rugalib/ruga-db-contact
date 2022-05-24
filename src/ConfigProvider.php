@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Ruga\Contact;
 
 use Ruga\Db\Schema\Updater;
-use Ruga\Contact\Address\Address;
-use Ruga\Contact\Address\AddressTable;
+use Ruga\Contact\Link\Party\PartyHasContactMechanismTable;
+use Ruga\Contact\Link\Person\PersonHasContactMechanismTable;
+use Ruga\Contact\Subtype\Address\AddressTable;
+use Ruga\Contact\Subtype\ElectronicAddress\ElectronicAddressTable;
+use Ruga\Contact\Subtype\TelecomNumber\TelecomNumberTable;
 use Ruga\Contact\Container\AddressTableFactory;
 
 class ConfigProvider
@@ -17,9 +20,17 @@ class ConfigProvider
             'db' => [
                 Updater::class => [
                     'components' => [
-                        Address::class => [
+                        ContactMechanism::class => [
                             Updater::CONF_REQUESTED_VERSION => 3,
                             Updater::CONF_SCHEMA_DIRECTORY => __DIR__ . '/../ruga-dbschema-contact',
+                            Updater::CONF_TABLES => [
+                                'ContactMechanismTable' => ContactMechanismTable::class,
+                                'TelecomNumberTable' => TelecomNumberTable::class,
+                                'ElectronicAddressTable' => ElectronicAddressTable::class,
+                                'AddressTable' => AddressTable::class,
+                                'PersonHasContactMechanismTable' => PersonHasContactMechanismTable::class,
+                                'PartyHasContactMechanismTable' => PartyHasContactMechanismTable::class,
+                            ],
                         ],
                     ],
                 ],

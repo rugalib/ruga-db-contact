@@ -9,7 +9,7 @@ use Laminas\ServiceManager\ServiceManager;
 /**
  * @author Roland Rusch, easy-smart solution GmbH <roland.rusch@easy-smart.ch>
  */
-class AddressTest extends \Ruga\Contact\Test\PHPUnit\AbstractTestSetUp
+class ContactTest extends \Ruga\Contact\Test\PHPUnit\AbstractTestSetUp
 {
     public function testCanCreateAddress(): void
     {
