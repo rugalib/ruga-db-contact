@@ -6,6 +6,6 @@ namespace Ruga\Contact\Subtype\Address;
 
 use Ruga\Contact\Subtype\SubtypeRowInterface;
 
-class Address extends \Ruga\Contact\Address\Address implements AddressAttributesInterface, SubtypeRowInterface
+class Address extends AbstractAddress implements AddressAttributesInterface, SubtypeRowInterface
 {
 }

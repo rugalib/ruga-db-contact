@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Ruga\Contact\Address;
+namespace Ruga\Contact\Subtype\Address;
 
 /**
  * Interface to an address.
