@@ -10,7 +10,8 @@
     "rugalib/ruga-db": "^1.0",
     "rugalib/ruga-log": "^1.0",
     "rugalib/ruga-db-person": "^1.0",
-    "rugalib/ruga-db-organization": "^1.0"
+    "rugalib/ruga-db-organization": "^1.0",
+    "rugalib/ruga-db-party": "^1.0"
   },
   "require-dev": {
     "phpunit/phpunit": "^9",
