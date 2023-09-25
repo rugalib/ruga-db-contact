@@ -8,8 +8,6 @@ declare(strict_types=1);
 
 namespace Ruga\Contact;
 
-
-use Ruga\Contact\Address\AddressTable;
 use Ruga\Std\Enum\AbstractEnum;
 
 /**
@@ -51,37 +49,37 @@ class ContactMechanismType extends AbstractEnum
         self::PHONE => [
             'subtypeTableClass' => Subtype\TelecomNumber\TelecomNumberTable::class,
             'template' => 'contactmechanism-TelecomNumber-edit',
-            'formClass' => Form\TelecomNumberForm::class,
+            'formClass' => Subtype\Form\TelecomNumberForm::class,
         ],
         self::MOBILE => [
             'subtypeTableClass' => Subtype\TelecomNumber\TelecomNumberTable::class,
             'template' => 'contactmechanism-TelecomNumber-edit',
-            'formClass' => Form\TelecomNumberForm::class,
+            'formClass' => Subtype\Form\TelecomNumberForm::class,
         ],
         self::FAX => [
             'subtypeTableClass' => Subtype\TelecomNumber\TelecomNumberTable::class,
             'template' => 'contactmechanism-TelecomNumber-edit',
-            'formClass' => Form\TelecomNumberForm::class,
+            'formClass' => Subtype\Form\TelecomNumberForm::class,
         ],
         self::MODEM => [
             'subtypeTableClass' => Subtype\TelecomNumber\TelecomNumberTable::class,
             'template' => 'contactmechanism-TelecomNumber-edit',
-            'formClass' => Form\TelecomNumberForm::class,
+            'formClass' => Subtype\Form\TelecomNumberForm::class,
         ],
         self::EMAIL => [
             'subtypeTableClass' => Subtype\ElectronicAddress\ElectronicAddressTable::class,
             'template' => 'contactmechanism-ElectronicAddress-edit',
-            'formClass' => Form\ElectronicAddressForm::class,
+            'formClass' => Subtype\Form\ElectronicAddressForm::class,
         ],
         self::URL => [
             'subtypeTableClass' => Subtype\ElectronicAddress\ElectronicAddressTable::class,
             'template' => 'contactmechanism-ElectronicAddress-edit',
-            'formClass' => Form\ElectronicAddressForm::class,
+            'formClass' => Subtype\Form\ElectronicAddressForm::class,
         ],
         self::POSTAL_ADDRESS => [
             'subtypeTableClass' => Subtype\Address\AddressTable::class,
             'template' => 'contactmechanism-PostalAddress-edit',
-            'formClass' => \Ruga\Address\Form\AddressForm::class,
+            'formClass' => Subtype\Form\AddressForm::class,
         ],
     ];
 }
