@@ -23,14 +23,8 @@ trait SubtypeTableTrait
      */
     public function findOrCreateRowByContactMechanism(AbstractContactMechanism $contactMechanism): SubtypeRowInterface
     {
-        if ($contactMechanism->isNew()) {
-            $subtype = $this->createRow();
-        } else {
-            if (!($subtype = $this->select(['ContactMechanism_id' => $contactMechanism->id])->current())) {
-                $subtype = $this->createRow();
-            }
-            
-            $subtype->setContactMechanismId($contactMechanism->id);
+        if(!$subtype=$contactMechanism->findDependentRowset($this)->current()) {
+            $subtype=$contactMechanism->createDependentRow($this);
         }
         return $subtype;
     }

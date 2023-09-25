@@ -8,20 +8,16 @@ declare(strict_types=1);
 
 namespace Ruga\Contact;
 
-
-use Laminas\Db\Sql\Expression;
-use Ruga\Contact\Address\Address;
 use Ruga\Contact\Link\AbstractLinkContactMechanism;
 use Ruga\Contact\Link\AbstractLinkContactMechanismAttributesInterface;
 use Ruga\Contact\Link\ContactMechanismCapableObjectInterface;
-use Ruga\Contact\Link\Party\AbstractPartyHasContactMechanism;
 use Ruga\Contact\Link\Party\PartyHasContactMechanismAttributesInterface;
 use Ruga\Contact\Link\Party\PartyHasContactMechanismTable;
-use Ruga\Contact\Link\Person\AbstractPersonHasContactMechanism;
 use Ruga\Contact\Link\Person\PersonHasContactMechanismAttributesInterface;
 use Ruga\Contact\Link\Person\PersonHasContactMechanismTable;
 use Ruga\Contact\Subtype\AbstractSubtypeRow;
 use Ruga\Contact\Subtype\AbstractSubtypeTable;
+use Ruga\Contact\Subtype\Address\Address;
 use Ruga\Contact\Subtype\Address\AddressAttributesInterface;
 use Ruga\Contact\Subtype\ElectronicAddress\ElectronicAddress;
 use Ruga\Contact\Subtype\ElectronicAddress\ElectronicAddressAttributesInterface;
@@ -30,7 +26,6 @@ use Ruga\Contact\Subtype\TelecomNumber\TelecomNumber;
 use Ruga\Contact\Subtype\TelecomNumber\TelecomNumberAttributesInterface;
 use Ruga\Db\Row\AbstractRow;
 use Ruga\Db\Row\AbstractRugaRow;
-use Ruga\Db\Table\Exception\InvalidArgumentException;
 use Ruga\Party\Party;
 use Ruga\Party\PartyTable;
 use Ruga\Person\Person;
@@ -43,31 +38,16 @@ use Ruga\Person\PersonTable;
  * @author   Roland Rusch, easy-smart solution GmbH <roland.rusch@easy-smart.ch>
  */
 abstract class AbstractContactMechanism extends AbstractRugaRow implements ContactMechanismAttributesInterface,
-                                                                            AbstractLinkContactMechanismAttributesInterface,
-                                                                            PartyHasContactMechanismAttributesInterface,
-                                                                            PersonHasContactMechanismAttributesInterface,
-                                                                            AddressAttributesInterface,
-                                                                            ElectronicAddressAttributesInterface,
-                                                                            TelecomNumberAttributesInterface,
-                                                                            ContactMechanismInterface
+                                                                           AbstractLinkContactMechanismAttributesInterface,
+                                                                           PartyHasContactMechanismAttributesInterface,
+                                                                           PersonHasContactMechanismAttributesInterface,
+                                                                           AddressAttributesInterface,
+                                                                           ElectronicAddressAttributesInterface,
+                                                                           TelecomNumberAttributesInterface,
+                                                                           ContactMechanismInterface
 {
-    /** @var SubtypeRowInterface */
-    private $subtype;
     
-    /** @var int */
-    private $link_party_id;
-    
-    /** @var int */
-    private $link_person_id;
-    
-    /** @var AbstractLinkContactMechanism */
-    private $link_obj;
-    
-    /** @var AbstractRow */
-    private $linkTo;
-    
-    /** @var AbstractContactMechanism $prevClone */
-    private $prevClone;
+    private ?AbstractContactMechanism $prevClone = null;
     
     
     
@@ -80,35 +60,30 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
      */
     public function getSubtype(): SubtypeRowInterface
     {
-//        \Ruga\Log::functionHead($this);
-        
-        if (!$this->subtype) {
-            if (!ContactMechanismType::isValidValue($this->contactmechanism_type)) {
-                throw new Exception\IllegalContactmechanismTypeException(
-                    "'{$this->contactmechanism_type}' is not a valid contact mechanism type."
-                );
-            }
-            
-            $subtypeClassName = null;
-            foreach (ContactMechanismType::getObjects() as $object) {
-                if ($object->val == $this->contactmechanism_type) {
-                    $subtypeClassName = $object->subtypeTableClass;
-                }
-            }
-            
-            if (!$subtypeClassName) {
-                throw new Exception\IllegalContactmechanismTypeException(
-                    "No class found for contactmechanism_type={$this->contactmechanism_type}."
-                );
-            }
-            
-            /** @var AbstractSubtypeTable $subtypetable */
-            $subtypetable = new $subtypeClassName($this->getTableGateway()->getAdapter());
-            $subtype = $subtypetable->findOrCreateRowByContactMechanism($this);
-            
-            $this->subtype = $subtype;
+        if (!ContactMechanismType::isValidValue($this->contactmechanism_type)) {
+            throw new Exception\IllegalContactmechanismTypeException(
+                "'{$this->contactmechanism_type}' is not a valid contact mechanism type."
+            );
         }
-        return $this->subtype;
+        
+        $subtypeClassName = null;
+        foreach (ContactMechanismType::getObjects() as $object) {
+            if ($object->val == $this->contactmechanism_type) {
+                $subtypeClassName = $object->subtypeTableClass;
+            }
+        }
+        
+        if (!$subtypeClassName) {
+            throw new Exception\IllegalContactmechanismTypeException(
+                "No class found for contactmechanism_type={$this->contactmechanism_type}."
+            );
+        }
+        
+        /** @var AbstractSubtypeTable $subtypetable */
+        $subtypetable = new $subtypeClassName($this->getTableGateway()->getAdapter());
+        $subtype = $subtypetable->findOrCreateRowByContactMechanism($this);
+        
+        return $subtype;
     }
     
     
@@ -128,25 +103,30 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
     
     
     /**
-     * Link the given $obj to the contact mechanism.
+     * Link the contact mechanism to the given $obj.
      *
      * @param $obj
      *
-     * @return AbstractLinkContactMechanism
-     * @throws \ReflectionException
+     * @return AbstractLinkContactMechanism iRow
+     * @throws \ReflectionException|\Exception
      */
     public function linkTo($obj): AbstractLinkContactMechanism
     {
-        if($obj instanceof ContactMechanismCapableObjectInterface) {
-            $this->linkTo = $obj;
+        if ($obj instanceof ContactMechanismCapableObjectInterface) {
             $obj->registerContactMechanismForSave($this);
-            return $this->getLinkObj();
+            return $this->getLinkedEntityIntersection();
         }
-    
-        if (($obj instanceof Person) || ($obj instanceof Party)) {
-            $this->linkTo = $obj;
-            return $this->getLinkObj();
+        
+        if ($obj instanceof Party) {
+            $this->linkManyToManyRow($obj, PartyHasContactMechanismTable::class);
+            return $this->getLinkedEntityIntersection();
         }
+        
+        if ($obj instanceof Person) {
+            $this->linkManyToManyRow($obj, PersonHasContactMechanismTable::class);
+            return $this->getLinkedEntityIntersection();
+        }
+        
         throw new Exception\IllegalLinkedEntityException(
             "Can not link unknown entity '" . get_class($obj) . "' to contact mechanism."
         );
@@ -168,10 +148,16 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
      */
     public function unlinkFrom($obj)
     {
-        if (($obj instanceof Person) || ($obj instanceof Party)) {
-            $linkobj = $this->getLinkObj();
-            $linkobj->delete();
-            $this->linkTo = null;
+        if ($obj instanceof Party) {
+            if ($iRow = $this->findIntersectionRows($obj, PartyHasContactMechanismTable::class)->current()) {
+                $this->unlinkManyToManyRow($obj, PartyHasContactMechanismTable::class);
+                $iRow->delete();
+            }
+        } elseif ($obj instanceof Person) {
+            if ($iRow = $this->findIntersectionRows($obj, PersonHasContactMechanismTable::class)->current()) {
+                $this->unlinkManyToManyRow($obj, PersonHasContactMechanismTable::class);
+                $iRow->delete();
+            }
         } else {
             throw new Exception\IllegalLinkedEntityException(
                 "Can not unlink from unknown entity '" . get_class($obj) . "'"
@@ -182,29 +168,72 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
     
     
     /**
-     * Get the link object instance.
+     * Return the PARTY or PERSON the contact mechanism is linked to.
+     *
+     * @return AbstractRow
+     * @deprecated Use \Ruga\Contact\AbstractContactMechanism::getLinkedEntity()
+     */
+    public function getLinkTo(): ?AbstractRow
+    {
+        return $this->getLinkedEntity();
+    }
+    
+    
+    
+    /**
+     * Return the PARTY or PERSON the contact mechanism is linked to.
+     *
+     * @return AbstractRow
+     */
+    public function getLinkedEntity(): ?AbstractRow
+    {
+        if ($party = $this->findManyToManyRowset(PartyTable::class, PartyHasContactMechanismTable::class)->current()) {
+            return $party;
+        }
+        if ($person = $this->findManyToManyRowset(PersonTable::class, PersonHasContactMechanismTable::class)->current(
+        )) {
+            return $person;
+        }
+        return null;
+    }
+    
+    
+    
+    /**
+     * Get the link object instance. This is either a PartyHasContactMechanism or a PersonHasContactMechanism.
+     *
+     * @return AbstractLinkContactMechanism
+     * @throws \Exception
+     * @deprecated Use \Ruga\Contact\AbstractContactMechanism::getLinkedEntityIntersection()
+     */
+    public function getLinkObj(): ?AbstractLinkContactMechanism
+    {
+        return $this->getLinkedEntityIntersection();
+    }
+    
+    
+    
+    /**
+     * Get the link object instance. This is either a PartyHasContactMechanism or a PersonHasContactMechanism.
      *
      * @return AbstractLinkContactMechanism
      * @throws \Exception
      */
-    public function getLinkObj(): AbstractLinkContactMechanism
+    public function getLinkedEntityIntersection(): ?AbstractLinkContactMechanism
     {
-        if (!$this->link_obj) {
-            if ($this->linkTo instanceof Person) {
-                $this->link_obj = (new PersonHasContactMechanismTable(
-                    $this->getTableGateway()->getAdapter()
-                ))->createRow();
-            } elseif ($this->linkTo instanceof Party) {
-                $this->link_obj = (new PartyHasContactMechanismTable(
-                    $this->getTableGateway()->getAdapter()
-                ))->createRow();
-            } else {
-                throw new Exception\IllegalLinkedEntityException("ContactMechanism is not linked to an entity.");
-            }
+        $partyRowset = $this->findManyToManyRowset(PartyTable::class, PartyHasContactMechanismTable::class);
+        if ($partyRowset->count() > 0) {
+            return $this->findIntersectionRows($partyRowset->current(), PartyHasContactMechanismTable::class)->current(
+            );
         }
-//        if(!$this->isNew()) $this->link_obj->ContactMechanism_id=$this->id;
-//        if(!$this->linkTo->isNew()) $this->link_obj->Object_id=$this->linkTo->id;
-        return $this->link_obj;
+        $personRowset = $this->findManyToManyRowset(PersonTable::class, PersonHasContactMechanismTable::class);
+        if ($personRowset->count() > 0) {
+            return $this->findIntersectionRows(
+                $personRowset->current(),
+                PersonHasContactMechanismTable::class
+            )->current();
+        }
+        return null;
     }
     
     
@@ -234,7 +263,9 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
         
         // try link object attributes
         try {
-            return $this->getLinkObj()->__get($name);
+            if ($obj = $this->getLinkedEntityIntersection()) {
+                return $obj->__get($name);
+            }
         } catch (\Exception $eLinkobj) {
             if (!$eLinkobj instanceof \Ruga\Db\Row\Exception\InvalidArgumentException) {
                 throw $eLinkobj;
@@ -280,10 +311,12 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
             }
         }
         
-        // try link object attributes
+        // try link object attributes (=intersection table to person or party)
         try {
-            $this->getLinkObj()->__set($name, $value);
-            return;
+            if ($obj = $this->getLinkedEntityIntersection()) {
+                $obj->__set($name, $value);
+                return;
+            }
         } catch (\Exception $eLinkobj) {
             if (!$eLinkobj instanceof \Ruga\Db\Row\Exception\InvalidArgumentException) {
                 throw $eLinkobj;
@@ -305,11 +338,17 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
     
     
     
+    /**
+     * Clone the current contact mechanism.
+     *
+     * @return self
+     * @throws \ReflectionException
+     */
     public function clone(): self
     {
         /** @var AbstractContactMechanism $clone */
         $clone = $this->getTableGateway()->createRow();
-        $clone->linkTo($this->linkTo);
+        $clone->linkTo($this->getLinkedEntity());
         $clone->contactmechanism_type = $this->contactmechanism_type;
         $clone->remark = $this->remark;
         $clone->emergency_contact = $this->emergency_contact;
@@ -346,24 +385,12 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
             
             if ($this->prevClone) {
                 $this->valid_from = new \DateTimeImmutable();
-                $this->prevClone->getLinkObj()->offsetSet(
+                $this->prevClone->getLinkedEntityIntersection()->offsetSet(
                     'valid_thru',
                     $this->valid_from->sub(new \DateInterval('PT1S'))
                 )->save();
             }
-            $ret = parent::save();
-            $this->getSubtype()->setContactMechanismId($this->id);
-            $this->getSubtype()->save();
-            
-            try {
-                $this->getLinkObj()->ContactMechanism_id = $this->id;
-                $this->getLinkObj()->Object_id = $this->linkTo->id;
-                $this->getLinkObj()->save();
-            } catch (\Exception $e) {
-                throw new Exception\IllegalLinkedEntityException("ContactMechanism is not linked to an entity.");
-            }
-            
-            return $ret;
+            return parent::save();
         } catch (\Exception $e) {
             $this->getTableGateway()->getAdapter()->getDriver()->getConnection()->rollback();
             throw $e;
@@ -389,7 +416,7 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
         try {
             $this->getTableGateway()->getAdapter()->getDriver()->getConnection()->beginTransaction();
             
-            if ($this->getLinkObj()->isNew()) {
+            if (!$this->getLinkedEntityIntersection() || $this->getLinkedEntityIntersection()->isNew()) {
                 // No link to a person or a party
                 // => really delete contactmechanism and his subtype
                 $this->getSubtype()->delete();
@@ -397,7 +424,9 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
             } else {
                 // There is a link to a person or a party
                 // don't delete contactmechanism, just set thru date to now-1sec
-                $this->getLinkObj()->valid_thru = (new \DateTimeImmutable())->sub(new \DateInterval('PT1S'));
+                $this->getLinkedEntityIntersection()->valid_thru = (new \DateTimeImmutable())->sub(
+                    new \DateInterval('PT1S')
+                );
                 $this->save();
             }
             return 0;
@@ -407,43 +436,6 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
         } finally {
             if (!isset($e)) {
                 $this->getTableGateway()->getAdapter()->getDriver()->getConnection()->commit();
-            }
-        }
-    }
-    
-    
-    
-    /**
-     * Initialize row.
-     * Populate $this->link_obj for existing rows. If the row is new, the link to an entity is not defined and must be
-     * set by the user.
-     *
-     * @throws \ReflectionException
-     */
-    protected function init()
-    {
-        parent::init();
-        
-        
-        if (!$this->link_obj && !$this->isNew()) {
-            if ($link_obj = (new PersonHasContactMechanismTable($this->getTableGateway()->getAdapter()))->select(
-                ['ContactMechanism_id' => $this->id]
-            )->current()) {
-                $this->link_obj = $link_obj;
-                $this->link_person_id = $this->link_obj->Person_id;
-                $this->linkTo = (new PersonTable($this->getTableGateway()->getAdapter()))->findById(
-                    $this->link_obj->Person_id
-                )->current();
-            }
-            
-            if ($link_obj = (new PartyHasContactMechanismTable($this->getTableGateway()->getAdapter()))->select(
-                ['ContactMechanism_id' => $this->id]
-            )->current()) {
-                $this->link_obj = $link_obj;
-                $this->link_party_id = $this->link_obj->Party_id;
-                $this->linkTo = (new PartyTable($this->getTableGateway()->getAdapter()))->findById(
-                    $this->link_obj->Party_id
-                )->current();
             }
         }
     }
@@ -488,8 +480,7 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
     public function isArchived(\DateTimeImmutable $keydate = null): bool
     {
         $keydate = $keydate ?? new \DateTimeImmutable();
-        return $this->getLinkObj()->valid_thru && ($this->getLinkObj()->valid_thru < $keydate);
+        return $this->getLinkedEntityIntersection()->valid_thru && ($this->getLinkedEntityIntersection(
+                )->valid_thru < $keydate);
     }
-    
-    
 }

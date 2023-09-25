@@ -33,10 +33,9 @@ interface ContactMechanismInterface
     /**
      * Get the link object instance.
      *
-     * @return AbstractLinkContactMechanism
      * @throws \Exception
      */
-    public function getLinkObj(): AbstractLinkContactMechanism;
+    public function getLinkObj(): ?AbstractLinkContactMechanism;
     
     
     
