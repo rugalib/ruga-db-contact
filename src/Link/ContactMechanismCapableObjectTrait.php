@@ -17,6 +17,7 @@ use Ruga\Db\Row\AbstractRow;
  * Trait ContactMechanismCapableObjectTrait
  *
  * @see     ContactMechanismCapableObjectInterface
+ * @deprecated Does no longer work. Use manyToMany, Child or Parent feature.
  */
 trait ContactMechanismCapableObjectTrait
 {
