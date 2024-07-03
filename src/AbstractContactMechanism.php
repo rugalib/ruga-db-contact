@@ -1,6 +1,6 @@
 <?php
 /*
- * SPDX-FileCopyrightText: 2023 Roland Rusch, easy-smart solution GmbH <roland.rusch@easy-smart.ch>
+ * SPDX-FileCopyrightText: 2024 Roland Rusch, easy-smart solution GmbH <roland.rusch@easy-smart.ch>
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -19,6 +19,7 @@ use Ruga\Contact\Subtype\AbstractSubtypeRow;
 use Ruga\Contact\Subtype\AbstractSubtypeTable;
 use Ruga\Contact\Subtype\Address\Address;
 use Ruga\Contact\Subtype\Address\AddressAttributesInterface;
+use Ruga\Contact\Subtype\Address\AddressTable;
 use Ruga\Contact\Subtype\ElectronicAddress\ElectronicAddress;
 use Ruga\Contact\Subtype\ElectronicAddress\ElectronicAddressAttributesInterface;
 use Ruga\Contact\Subtype\SubtypeRowInterface;
@@ -26,6 +27,7 @@ use Ruga\Contact\Subtype\TelecomNumber\TelecomNumber;
 use Ruga\Contact\Subtype\TelecomNumber\TelecomNumberAttributesInterface;
 use Ruga\Db\Row\AbstractRow;
 use Ruga\Db\Row\AbstractRugaRow;
+use Ruga\Db\Row\RowInterface;
 use Ruga\Party\Party;
 use Ruga\Party\PartyTable;
 use Ruga\Person\Person;
@@ -48,6 +50,7 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
 {
     
     private ?AbstractContactMechanism $prevClone = null;
+    private ?AbstractContactMechanism $cowClone = null;
     
     
     
@@ -289,7 +292,7 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
     /**
      * Magic function that sets database columns and class attributes.
      *
-     * @param string $name  Name of the column
+     * @param string $name Name of the column
      * @param mixed  $value Value of the column
      *
      * @return void
@@ -297,9 +300,9 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
      */
     public function __set($name, $value)
     {
-        if (!$this->isNew()) {
-            throw new \Exception("Object is immutable. Please clone before write.");
-        }
+//        if (!$this->isNew()) {
+//            throw new \Exception("Object is immutable. Please clone before write.");
+//        }
         
         // Try my attributes
         try {
@@ -352,7 +355,7 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
         $clone->contactmechanism_type = $this->contactmechanism_type;
         $clone->remark = $this->remark;
         $clone->emergency_contact = $this->emergency_contact;
-        foreach ($this->getSubtype()->getArrayCopy() as $key => $val) {
+        foreach ($this->getSubtype()->toArrayNative() as $key => $val) {
             if ($clone->getSubtype()->offsetExists($key) && !in_array($key, ['id'])) {
                 $clone->getSubtype()->offsetSet($key, $val);
             }
@@ -367,9 +370,31 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
     
     public function setPreviousClone(AbstractContactMechanism $prevClone)
     {
-        $this->prevClone = $prevClone;
+        if($this->prevClone === null) {
+            $this->prevClone = $prevClone;
+            $prevClone->setCopyOnWriteClone($this);
+        }
     }
     
+    public function getPreviousClone(): ?AbstractContactMechanism
+    {
+        return $this->prevClone;
+    }
+    
+    
+    
+    public function setCopyOnWriteClone(AbstractContactMechanism $cowClone)
+    {
+        if($this->cowClone === null) {
+            $this->cowClone = $cowClone;
+            $cowClone->setPreviousClone($this);
+        }
+    }
+    
+    public function getCopyOnWriteClone(): ?AbstractContactMechanism
+    {
+        return $this->cowClone;
+    }
     
     
     /**
@@ -451,19 +476,26 @@ abstract class AbstractContactMechanism extends AbstractRugaRow implements Conta
      */
     public function toArray(): array
     {
-        $aA = [];
-        $aA['html_link'] = "<a href=\"contactmechanism/{$this->PK}/edit\">" . $this->fullname . '</a>';
-        $aA['isDisabled'] = $this->isDisabled();
-        
-        $aA['isDisabled'] = false;
-        $aA['isDeleted'] = false;
-        $aA['canBeChangedBy'] = true;
-        
-        $aC = $this->getSubtype()->toArray();
-        $aD = $this->getLinkObj()->toArray();
-        
-        $aB = parent::toArray();
-        return array_merge($aA, $aC, $aD, $aB);
+        $data = parent::toArray();
+        $newKeys = array_map(function ($key) {
+            return "contactmechanism.{$key}";
+        }, array_keys($data));
+        $data = array_combine($newKeys, array_values($data));
+        $data = array_merge(
+            $data,
+            $this->toArrayDependent(
+                AddressTable::class, null, null,
+                function (
+                    int $index,
+                    RowInterface $dependentRow,
+                    array $dependentConstraint,
+                    RowInterface $parentRow
+                ) {
+                    return "";
+                }
+            )
+        );
+        return $data;
     }
     
     

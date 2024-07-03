@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace Ruga\Contact\Link;
 
+use Ruga\Contact\ContactMechanismTable;
+use Ruga\Contact\Subtype\Address\AddressTable;
 use Ruga\Db\Row\AbstractRugaRow;
 
 /**
@@ -47,6 +49,16 @@ abstract class AbstractLinkContactMechanism extends AbstractRugaRow implements A
         }
         parent::__set($name, $value);
     }
+    
+    
+    public function toArray(): array
+    {
+        $data = parent::toArray();
+        $data = array_merge($data, $this->toArrayParent(ContactMechanismTable::class));
+        return $data;
+    }
+    
+    
     
     
 }

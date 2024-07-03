@@ -24,52 +24,59 @@ abstract class AbstractContactMechanismTable extends AbstractRugaTable
     /**
      *  Find all the contact mechanisms for the given $obj.
      *
-     * @param AbstractRow             $obj
+     * @param AbstractRow $obj
      *
-     * @param bool                    $findall
+     * @param bool $findall
      *
      * @param \DateTimeImmutable|null $keydate
      *
      * @return \Laminas\Db\ResultSet\ResultSetInterface|\Ruga\Db\ResultSet\ResultSet
      * @throws \ReflectionException
      */
-    public function findContactMechanismTable(AbstractRow $obj, bool $findall=false, \DateTimeImmutable $keydate=null)
-    {
+    public function findContactMechanismTable(
+        AbstractRow $obj,
+        bool $findall = false,
+        \DateTimeImmutable $keydate = null
+    ) {
         Log::functionHead($this);
         if ($obj->isNew()) {
             return new \ArrayIterator([]);
         }
         
-        if($keydate === null) $keydate=new \DateTimeImmutable();
-        $keydate_str=$keydate->format('Y-m-d H:i:s');
-    
+        if ($keydate === null) {
+            $keydate = new \DateTimeImmutable();
+        }
+        $keydate_str = $keydate->format('Y-m-d H:i:s');
+        
         /** @var Sql $sql */
         if (is_a($obj, Party::class)) {
             $linkTable = new Link\Party\PartyHasContactMechanismTable($this->getAdapter());
-            $sql=$linkTable->getSql();
-            $select=$sql->select();
+            $sql = $linkTable->getSql();
+            $select = $sql->select();
             $select->where(['Party_id' => $obj->id]);
         } elseif (is_a($obj, Person::class)) {
             $linkTable = new Link\Person\PersonHasContactMechanismTable($this->getAdapter());
-            $sql=$linkTable->getSql();
-            $select=$sql->select();
+            $sql = $linkTable->getSql();
+            $select = $sql->select();
             $select->where(['Person_id' => $obj->id]);
         } else {
             throw new Exception\IllegalLinkedEntityException(
                 "Unknown entity '" . get_class($obj) . "' for contact mechanism."
             );
         }
-    
-        if(!$findall) $select->where(function(Where $where) use($keydate_str) {
-            $where->NEST->isNull('valid_from')->or->lessThanOrEqualTo('valid_from', $keydate_str);
-            $where->NEST->isNull('valid_thru')->or->greaterThanOrEqualTo('valid_thru', $keydate_str);
-        });
-    
+        
+        if (!$findall) {
+            $select->where(function (Where $where) use ($keydate_str) {
+                $where->NEST->isNull('valid_from')->or->lessThanOrEqualTo('valid_from', $keydate_str);
+                $where->NEST->isNull('valid_thru')->or->greaterThanOrEqualTo('valid_thru', $keydate_str);
+            });
+        }
+        
         
         \Ruga\Log::log_msg("SQL={$sql->buildSqlString($select)}");
-        $links=$linkTable->selectWith($select);
-    
-    
+        $links = $linkTable->selectWith($select);
+        
+        
         // Find the referenced ContactMechanisms
         $contactmechanism_ids = [];
         iterator_apply(
@@ -80,8 +87,32 @@ abstract class AbstractContactMechanismTable extends AbstractRugaTable
             },
             [$links, &$contactmechanism_ids]
         );
-    
+        
         return $this->findById($contactmechanism_ids);
+    }
+    
+    
+    
+    private array $cmCache = [];
+    
+    
+    
+    public function getContactMechanismForWrite(AbstractRow $obj, ContactMechanismType $type)
+    {
+        if (!$this->cmCache[$type->getValue()]) {
+            // First try to find a contact mechanism
+            foreach ($this->findContactMechanismTable($obj) as $contactmechanism) {
+                if ($contactmechanism->contactmechanism_type == $type) {
+                    // and clone it, if found
+                    /** @var ContactMechanism $contactmechanism */
+                    $contactmechanism = $contactmechanism->clone();
+                    $this->cmCache[$type->getValue()] = $contactmechanism;
+                }
+            }
+            // create a new contact mechanism
+            
+        }
+        return $this->cmCache[$type->getValue()];
     }
     
     
